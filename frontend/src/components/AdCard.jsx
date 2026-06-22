@@ -18,7 +18,7 @@
 
 function AdCard({ ad, isFavorite = false, onToggleFavorite }) {
   return (
-    <div className="ad-card">
+    <article className="listing-card">
       <div className="ad-card-top">
         <div className="ad-badges">
           <span className={getSourceBadgeClass(ad.source)}>
@@ -84,7 +84,7 @@ function AdCard({ ad, isFavorite = false, onToggleFavorite }) {
           Vezi anunțul
         </a>
       </div>
-    </div>
+    </article>
   );
 }
 
