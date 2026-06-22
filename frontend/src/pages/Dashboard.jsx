@@ -100,7 +100,7 @@ function Dashboard() {
       });
 
       const res = await api.get("/ads", { params });
-      setAds(res.data);
+      setAds(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Eroare la ads:", error);
     }

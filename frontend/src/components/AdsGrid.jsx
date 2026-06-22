@@ -21,7 +21,7 @@ function AdsGrid({
   }
 
   return (
-    <div className="section-stack">
+    <section className="panel ads-results-panel">
       <div className="results-bar">
         <div>
           <h3 className="results-title">{title}</h3>
@@ -45,7 +45,7 @@ function AdsGrid({
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

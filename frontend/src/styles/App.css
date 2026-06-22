@@ -436,6 +436,13 @@ button:hover {
   flex-wrap: wrap;
 }
 
+.ads-results-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: visible;
+}
+
 .results-title {
   margin: 0;
   font-size: 1.25rem;
@@ -461,6 +468,7 @@ button:hover {
   width: 100%;
   min-width: 0;
   padding: 4px 0 0;
+  overflow: visible;
 }
 
 .ad-card {
