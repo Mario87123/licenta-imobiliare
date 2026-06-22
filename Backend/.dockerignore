@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+app.db
+*.db
+*.db-shm
+*.db-wal
+ml_models/
