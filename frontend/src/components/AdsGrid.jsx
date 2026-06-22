@@ -36,12 +36,13 @@ function AdsGrid({
       <div className="ads-grid-panel">
         <div className="ads-grid">
           {safeAds.map((ad) => (
-            <AdCard
-              key={ad.id}
-              ad={ad}
-              isFavorite={favoriteIds.has(ad.id)}
-              onToggleFavorite={onToggleFavorite}
-            />
+            <div className="ad-grid-cell" key={ad.id || ad.url}>
+              <AdCard
+                ad={ad}
+                isFavorite={favoriteIds.has(ad.id)}
+                onToggleFavorite={onToggleFavorite}
+              />
+            </div>
           ))}
         </div>
       </div>

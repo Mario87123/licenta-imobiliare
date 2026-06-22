@@ -466,6 +466,18 @@ button:hover {
   min-height: 360px;
 }
 
+.ad-grid-cell {
+  display: block;
+  min-width: 0;
+  min-height: 360px;
+}
+
+.ad-grid-cell > .ad-card {
+  display: flex !important;
+  width: 100% !important;
+  min-height: 360px !important;
+}
+
 .ads-grid-panel {
   display: block;
   width: 100%;
