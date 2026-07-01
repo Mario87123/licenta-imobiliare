@@ -249,6 +249,14 @@ function Dashboard() {
   };
 
   useEffect(() => {
+    const resetToken = new URLSearchParams(window.location.search).get(
+      "reset_token"
+    );
+
+    if (resetToken) {
+      setAuthModal({ mode: "reset", resetToken });
+    }
+
     fetchAds();
     fetchJobs();
     fetchStatistics();
@@ -537,6 +545,7 @@ function Dashboard() {
       {authModal && (
         <AuthPanel
           initialMode={authModal.mode}
+          initialResetToken={authModal.resetToken}
           message={authModal.message}
           onAuthSuccess={handleAuthSuccess}
           onClose={() => setAuthModal(null)}

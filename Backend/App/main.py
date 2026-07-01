@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .database import init_db, get_connection
+from .email_service import build_password_reset_url, send_password_reset_email
 from .crawler_registry import get_crawler
 from .duplicate_detector import (
     detect_duplicate_groups,
@@ -79,6 +80,7 @@ class EstimateRequest(BaseModel):
 
 SESSION_DAYS = 7
 PASSWORD_RESET_MINUTES = 30
+PASSWORD_RESET_COOLDOWN_SECONDS = 60
 
 
 def normalize_email(email: str) -> str:
@@ -272,29 +274,63 @@ def request_password_reset(payload: PasswordResetRequest):
     """)
 
     response = {
-        "message": "Daca email-ul exista, a fost generat un cod de resetare.",
-        "reset_token": None,
+        "message": "Daca adresa exista, vei primi instructiunile de resetare prin email.",
         "expires_in_minutes": PASSWORD_RESET_MINUTES,
     }
+    reset_token = None
 
     if user:
-        reset_token = secrets.token_urlsafe(24)
-        expires_at = format_sql_datetime(
-            datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_MINUTES)
-        )
-
         cursor.execute("""
-            INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-            VALUES (?, ?, ?)
-        """, (
-            user["id"],
-            hash_reset_token(reset_token),
-            expires_at,
-        ))
-        response["reset_token"] = reset_token
+            SELECT id
+            FROM password_reset_tokens
+            WHERE user_id = ?
+              AND used_at IS NULL
+              AND datetime(created_at) > datetime('now', ?)
+            LIMIT 1
+        """, (user["id"], f"-{PASSWORD_RESET_COOLDOWN_SECONDS} seconds"))
+        recently_requested = cursor.fetchone()
 
+        if not recently_requested:
+            reset_token = secrets.token_urlsafe(24)
+            expires_at = format_sql_datetime(
+                datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_MINUTES)
+            )
+
+            cursor.execute("""
+                UPDATE password_reset_tokens
+                SET used_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND used_at IS NULL
+            """, (user["id"],))
+            cursor.execute("""
+                INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+                VALUES (?, ?, ?)
+            """, (
+                user["id"],
+                hash_reset_token(reset_token),
+                expires_at,
+            ))
     conn.commit()
     conn.close()
+
+    if reset_token:
+        try:
+            reset_url = build_password_reset_url(reset_token)
+            send_password_reset_email(email, reset_url, PASSWORD_RESET_MINUTES)
+        except Exception as exc:
+            print(f"[EMAIL] Trimiterea mesajului de resetare a esuat: {exc}")
+            cleanup_conn = get_connection()
+            cleanup_cursor = cleanup_conn.cursor()
+            cleanup_cursor.execute(
+                "DELETE FROM password_reset_tokens WHERE token_hash = ?",
+                (hash_reset_token(reset_token),),
+            )
+            cleanup_conn.commit()
+            cleanup_conn.close()
+            raise HTTPException(
+                status_code=503,
+                detail="Mesajul nu a putut fi trimis momentan. Incearca din nou mai tarziu.",
+            ) from exc
+
     return response
 
 

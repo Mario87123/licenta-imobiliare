@@ -3,6 +3,7 @@ import api from "../api/api";
 
 function AuthPanel({
   initialMode = "login",
+  initialResetToken = "",
   onAuthSuccess,
   onClose,
   message,
@@ -13,16 +14,16 @@ function AuthPanel({
     email: "",
     password: "",
     confirmPassword: "",
-    resetToken: "",
+    resetToken: initialResetToken,
   });
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
-  const [generatedToken, setGeneratedToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setMode(initialMode);
-  }, [initialMode]);
+    setForm((prev) => ({ ...prev, resetToken: initialResetToken }));
+  }, [initialMode, initialResetToken]);
 
   const handleChange = (event) => {
     setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
@@ -32,10 +33,6 @@ function AuthPanel({
     setMode(nextMode);
     setError("");
     setInfo("");
-
-    if (nextMode !== "reset") {
-      setGeneratedToken("");
-    }
   };
 
   const handleAuthSubmit = async () => {
@@ -62,15 +59,9 @@ function AuthPanel({
       email: form.email,
     });
 
-    if (!response.data.reset_token) {
-      setInfo("Dacă există un cont cu acest email, va fi generat un cod de resetare.");
-      return;
-    }
-
-    setGeneratedToken(response.data.reset_token);
-    setForm((prev) => ({ ...prev, resetToken: response.data.reset_token, password: "" }));
-    setInfo(`Codul este valabil ${response.data.expires_in_minutes} de minute.`);
-    setMode("reset");
+    setInfo(
+      `Dacă adresa există, vei primi un link valabil ${response.data.expires_in_minutes} de minute. Verifică și folderul Spam.`
+    );
   };
 
   const handlePasswordResetConfirm = async () => {
@@ -90,7 +81,7 @@ function AuthPanel({
       confirmPassword: "",
       resetToken: "",
     }));
-    setGeneratedToken("");
+    window.history.replaceState({}, "", window.location.pathname);
     setInfo("Parola a fost resetată. Te poți autentifica folosind parola nouă.");
     setMode("login");
   };
@@ -110,7 +101,9 @@ function AuthPanel({
         await handleAuthSubmit();
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "Operațiunea nu a putut fi finalizată.");
+      setError(
+        err.response?.data?.detail || "Operațiunea nu a putut fi finalizată."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -119,27 +112,32 @@ function AuthPanel({
   const titleByMode = {
     login: "Logare cont",
     register: "Creează cont",
-    forgot: "Resetare parola",
-    reset: "Parola nouă",
+    forgot: "Resetare parolă",
+    reset: "Parolă nouă",
   };
 
   const submitLabelByMode = {
     login: "Autentificare",
     register: "Creează cont",
-    forgot: "Generează cod",
+    forgot: "Trimite linkul",
     reset: "Salvează parola nouă",
   };
 
   const defaultMessage =
     mode === "forgot"
-      ? "Introdu email-ul contului pentru a genera un cod de resetare."
+      ? "Introdu adresa de e-mail asociată contului pentru a primi linkul de resetare."
       : mode === "reset"
-        ? "Introdu codul de resetare și parola nouă pentru contul tău."
+        ? "Alege o parolă nouă pentru contul tău."
         : "Autentifică-te pentru a salva anunțuri și pentru a folosi funcțiile asociate contului.";
 
   return (
     <div className="auth-modal-backdrop" role="presentation">
-      <section className="auth-card auth-modal" role="dialog" aria-modal="true">
+      <section
+        className="auth-card auth-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-dialog-title"
+      >
         <button
           className="auth-close-btn"
           type="button"
@@ -150,8 +148,12 @@ function AuthPanel({
         </button>
 
         <span className="workspace-label">Acces platformă</span>
-        <h1>{titleByMode[mode]}</h1>
-        <p>{message && mode !== "forgot" && mode !== "reset" ? message : defaultMessage}</p>
+        <h1 id="auth-dialog-title">{titleByMode[mode]}</h1>
+        <p>
+          {message && mode !== "forgot" && mode !== "reset"
+            ? message
+            : defaultMessage}
+        </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {mode === "register" && (
@@ -168,7 +170,7 @@ function AuthPanel({
 
           {mode !== "reset" && (
             <label className="field">
-              <span>Email</span>
+              <span>E-mail</span>
               <input
                 name="email"
                 type="email"
@@ -180,24 +182,7 @@ function AuthPanel({
           )}
 
           {mode === "reset" && (
-            <>
-              {generatedToken && (
-                <div className="auth-reset-token">
-                  <span>Cod resetare generat</span>
-                  <strong>{generatedToken}</strong>
-                </div>
-              )}
-
-              <label className="field">
-                <span>Cod resetare</span>
-                <input
-                  name="resetToken"
-                  value={form.resetToken}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-            </>
+            <input name="resetToken" type="hidden" value={form.resetToken} />
           )}
 
           {mode !== "forgot" && (
@@ -252,7 +237,7 @@ function AuthPanel({
             type="button"
             onClick={() => changeMode("forgot")}
           >
-            Generează alt cod
+            Trimite alt link
           </button>
         )}
 
